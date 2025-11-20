@@ -1,5 +1,5 @@
 // Vercel Serverless Function for CoinGecko API Proxy
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,11 +12,14 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Get the target URL from query params
-  const targetPath = req.url.replace('/api/coingecko', '');
-  const coingeckoUrl = `https://api.coingecko.com/api/v3${targetPath}`;
-
   try {
+    // Extract path from URL
+    const urlPath = req.url.split('?')[0].replace('/api/coingecko', '');
+    const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const coingeckoUrl = `https://api.coingecko.com/api/v3${urlPath}${queryString ? '?' + queryString : ''}`;
+
+    console.log('Proxying to:', coingeckoUrl);
+
     const response = await fetch(coingeckoUrl, {
       headers: {
         'Accept': 'application/json',
@@ -24,6 +27,7 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
+      console.error('CoinGecko API error:', response.status);
       return res.status(response.status).json({ error: `CoinGecko API error: ${response.status}` });
     }
 
@@ -31,7 +35,7 @@ export default async function handler(req, res) {
     res.status(200).json(data);
   } catch (error) {
     console.error('CoinGecko API proxy error:', error);
-    res.status(500).json({ error: 'Failed to fetch from CoinGecko' });
+    res.status(500).json({ error: 'Failed to fetch from CoinGecko', message: error.message });
   }
-}
+};
 
