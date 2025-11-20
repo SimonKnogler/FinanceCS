@@ -1,33 +1,31 @@
-// Vercel Serverless Function for CoinGecko API Proxy
+// Catch-all CoinGecko API proxy for Vercel
 module.exports = async (req, res) => {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept');
 
-  // Handle preflight
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
   try {
-    // Extract path from URL
-    const urlPath = req.url.split('?')[0].replace('/api/coingecko', '');
-    const queryString = req.url.includes('?') ? req.url.split('?')[1] : '';
-    const coingeckoUrl = `https://api.coingecko.com/api/v3${urlPath}${queryString ? '?' + queryString : ''}`;
+    const pathParam = req.query.path;
+    const extraPath = Array.isArray(pathParam) ? `/${pathParam.join('/')}` : '';
+    const queryString = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    const targetUrl = `https://api.coingecko.com/api/v3${extraPath}${queryString}`;
 
-    console.log('Proxying to:', coingeckoUrl);
+    console.log('Proxying CoinGecko request to:', targetUrl);
 
-    const response = await fetch(coingeckoUrl, {
+    const response = await fetch(targetUrl, {
       headers: {
         'Accept': 'application/json',
       },
     });
 
     if (!response.ok) {
-      console.error('CoinGecko API error:', response.status);
+      console.error('CoinGecko API error:', response.status, targetUrl);
       return res.status(response.status).json({ error: `CoinGecko API error: ${response.status}` });
     }
 
